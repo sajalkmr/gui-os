@@ -5,12 +5,13 @@ section code
 
 .init:
     mov eax, 0x07c0
+    mov ds, eax
     mov eax, 0xb800
     mov es, eax
     mov eax, 0; set eax to 0-> i=0
-    mov ebx, 0 ; 
-    mov ecx, 0
-    mov dl, 0
+    mov ebx, 0 ; index of current character in the string to be printed
+    mov ecx, 0 ; actual addresss of the character on screen
+    mov dl, 0 ; actual value of the character to be printed
 
 
 .clear:
@@ -23,12 +24,36 @@ section code
 
     jl .clear
 
-.main:
+mov eax, text2
+mov ecx,  3 * 2 * 80
+push .end
+call .print
 
-    mov byte [es:0x00], 'H' ; 0xb800 + 0x00 = 0xb800
-    mov byte [es:0x01], 0x20 
+.end:
+    mov byte [es:0x00], 'L'
+    jmp $
 
-jmp $
+.print:
+    mov dl, byte[eax + ebx]
+
+    cmp dl, 0
+    je .print_end
+
+    mov byte [es:ecx], dl
+
+    inc ebx
+    inc ecx
+    inc ecx
+
+    jmp .print
+
+.print_end:
+    ret
+
+
+
+text: db 'Hello, World!', 0
+text2: db 'This is a test', 0
 
 times 510 - ($ - $$) db 0x00 ; Pads file with 0s, to make it 512 bytes
 
