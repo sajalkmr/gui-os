@@ -1,11 +1,10 @@
-[org 0x00]
+[org 0x7c00]
 [bits 16]
 
 section code
 
 .init:
-    mov eax, 0x07c0
-    mov ds, eax
+    
     mov eax, 0xb800
     mov es, eax
     mov eax, 0; set eax to 0-> i=0
@@ -17,21 +16,20 @@ section code
 .clear:
     mov byte [es:eax], 0; Move blank character to current text address
     inc eax
-    mov byte [es:eax], 0x20; Move the bg color n character to next address
+    mov byte [es:eax], 0xD0; Move the bg color n character to next address
     inc eax
 
     cmp eax, 2 * 25 * 80
 
     jl .clear
 
-mov eax, text2
-mov ecx,  3 * 2 * 80
-push .end
+mov eax, welcome
+mov ecx,  0 * 2 * 80
+
 call .print
 
-.end:
-    mov byte [es:0x00], 'L'
-    jmp $
+jmp .switch
+
 
 .print:
     mov dl, byte[eax + ebx]
@@ -50,10 +48,59 @@ call .print
 .print_end:
     ret
 
+.switch:
+    cli ; clear interrupts
+    lgdt [gdt_descriptor] ; load the gdt table
+
+    mov eax, cr0
+    or eax, 0x1
+    mov cr0, eax ; enable protected mode
+
+    jmp protected_mode
 
 
-text: db 'Hello, World!', 0
-text2: db 'This is a test', 0
+welcome: db 'Welcome to my OS!', 0
+
+[bits 32]
+protected_mode:
+    mov ax, data_seg
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; update stack pointer
+    mov ebp, 0x90000
+    mov esp, ebp
+
+    jmp $
+
+gdt_begin:
+gdt_null_descriptor:
+    dd 0x00
+    dd 0x00
+gdt_code_seg:
+    dw 0xffff
+    dw 0x00
+    db 0x00
+    db 10011010b
+    db 11001111b
+    db 0x00
+gdt_data_seg:
+    dw 0xffff
+    dw 0x00
+    db 0x00
+    db 10010010b
+    db 11001111b
+    db 0x00
+gdt_end:
+gdt_descriptor:
+    dw gdt_end - gdt_begin - 1
+    dd gdt_begin
+
+code_seg equ gdt_code_seg - gdt_begin
+data_seg equ gdt_data_seg - gdt_begin
 
 times 510 - ($ - $$) db 0x00 ; Pads file with 0s, to make it 512 bytes
 
