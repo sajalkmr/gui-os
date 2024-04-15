@@ -3,52 +3,21 @@
 
 section code
 
-.init:
-    
-    mov eax, 0xb800
-    mov es, eax
-    mov eax, 0; set eax to 0-> i=0
-    mov ebx, 0 ; index of current character in the string to be printed
-    mov ecx, 0 ; actual addresss of the character on screen
-    mov dl, 0 ; actual value of the character to be printed
 
 
-.clear:
-    mov byte [es:eax], 0; Move blank character to current text address
-    inc eax
-    mov byte [es:eax], 0xD0; Move the bg color n character to next address
-    inc eax
 
-    cmp eax, 2 * 25 * 80
-
-    jl .clear
-
-mov eax, welcome
-mov ecx,  0 * 2 * 80
-
-call .print
-
-jmp .switch
-
-
-.print:
-    mov dl, byte[eax + ebx]
-
-    cmp dl, 0
-    je .print_end
-
-    mov byte [es:ecx], dl
-
-    inc ebx
-    inc ecx
-    inc ecx
-
-    jmp .print
-
-.print_end:
-    ret
 
 .switch:
+    mov bx, 0x1000 ; load from hdd
+    mov ah, 0x02 ; read sectors
+    mov al, 30 ; read 30 sectors
+    mov ch, 0x00 ; cylinder 0
+    mov dh, 0x00 ; head 0
+    mov cl, 0x02 ; sector 2
+    int 0x13 ; call bios
+
+
+
     cli ; clear interrupts
     lgdt [gdt_descriptor] ; load the gdt table
 
@@ -56,7 +25,7 @@ jmp .switch
     or eax, 0x1
     mov cr0, eax ; enable protected mode
 
-    jmp protected_mode
+    jmp code_seg:protected_mode
 
 
 welcome: db 'Welcome to my OS!', 0
@@ -74,6 +43,7 @@ protected_mode:
     mov ebp, 0x90000
     mov esp, ebp
 
+    call 0x1000 ; call the kernel
     jmp $
 
 gdt_begin:
